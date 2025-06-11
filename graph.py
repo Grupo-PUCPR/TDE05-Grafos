@@ -21,11 +21,19 @@ class Graph:
   def get_size(self):
     print(f"\nO tamanho do grafo é: {self.size}")
     return self.size
+  
+  def return_vertex_edges(self):
+    print(f"{__class__.name}:\nVértices: {self.order}\nArestas: {self.size}")
+    return 
+  
+  def return_components(self):
+    raise NotImplementedError("Tem que ser implementado na subclasse!")
 
   def add_vertex(self, name):
       if name not in self.vertices:
           self.vertices.append(name)
           self.order += 1
+          print(name)
       else:
           raise ValueError("Vértice já existe!")
 
@@ -86,23 +94,19 @@ class Graph:
       return adjs
 
   def dijkstra(self, source_node):
-    #create a dict with the structure: Vertex - Accumulated Weight, Predecessor
     distance = {vertex: [np.inf, None] for vertex in self.body}
     distance[source_node][0] = 0 
-    cost = [(0, source_node)] #add the source node to the cost
+    cost = [(0, source_node)] 
     
-    #while my cost list is not 0, continue
     while cost:
       accumulated_weight, current_node = heapq.heappop(cost)
-      #get the adjacent vertices to the current node
       adjacents = self.get_adjacent(current_node)
       for vertex, edge_weight in adjacents:
           weight = accumulated_weight + edge_weight
           if weight < distance[vertex][0]:
             distance[vertex] = weight, current_node
-            heapq.heappush(cost, (weight, vertex)) #add all adjacent vertices and their weight to the cost list
+            heapq.heappush(cost, (weight, vertex)) 
     
-    #remove from the distance list the vertices whose values are inf
     unreachable_nodes = [v for v in distance if distance[v][0] == np.inf]
     for v in unreachable_nodes:
       distance.pop(v)
@@ -185,6 +189,19 @@ class Graph:
 
         return max(largest_costs, key=lambda item: item[0])
   
+"""
+Neste trabalho, você e sua equipe, irão explorar os relacionamentos entre criadores de conteúdo
+disponível nas principais plataformas de streaming (Netflix, Amazon Prime Video e Disney+). A partir de
+um conjunto de dados1 com informações sobre 19.621 filmes e séries envolvendo 61.811 atores/atrizes
+e 10.870 diretores, você deverá construir dois grafos para a condução de análises exploratórias:
+
+1. Um grafo ponderado direcionado que representa as relações entre os atores/atrizes com os
+diretores das obras, considerando todos os filmes e séries do catálogo;
+
+2. Um grafo ponderado não-direcionado que representa as relações entre os atores/atrizes em uma
+obra, considerando todos os filmes e séries do catálogo.
+"""
+
 class Graph_directed(Graph):
   def __init__(self):
     super().__init__()
@@ -223,69 +240,162 @@ class Graph_directed(Graph):
       if vertex1 in self.body:
         for v in self.body[vertex1]:
           if v[0] == vertex2:
-            print(f"{vertex1}: {v}")
+            #print(f"{vertex1}: {v}")
             return v[1]
       else:
          raise ValueError("Não possuem arestas!")
+  
+  def dfs_visiting_finished(self, source_node):
+    visited = []
+    stack = []
+    order_visited = []
 
-  def construct_graph(self, df):
-    df = df.drop(columns=['title','show_id', 'type', 'country', 'date_added', 'release_year', 'rating', 'duration', 'listed_in', 'description'])
-    for directors, cast in df.values:
-      directors = str(directors)
-      cast = str(cast)
-      if directors == 'nan' or directors == np.nan:
-        continue
+    stack.append(source_node)
+
+    while len(stack) > 0:
+      element = stack.pop()
+      
+      if element not in visited:
+        visited.append(element)
+
+        for adj, _ in self.body(element):
+          if adj not in visited:
+            stack.append(adj)
+
+    return visited
+  
+
+  def transpose_graph(self):
+    graph_t = Graph_directed()
+    for node in self.body:
+      for adj_node, weight in self.body[node]:
+        graph_t.add_edge(adj_node, node, weight) #add o inverso
+
+
+class Graph_undirected(Graph):
+  def __init__(self):
+    super().__init__()
+    self.body = defaultdict(list)
+
+  def add_edge(self, vertex1, vertex2, weight):
+    if weight < 0:
+      raise ValueError("Peso inválido!")
+    
+    # Adiciona vértices se não existirem
+    if vertex1 not in self.vertices:
+      self.add_vertex(vertex1)
+    if vertex2 not in self.vertices:
+      self.add_vertex(vertex2)
+
+    # Remove arestas existentes se houver
+    if self.has_edge(vertex1, vertex2):
+      # Remove a aresta antiga
+      self.body[vertex1] = [edge for edge in self.body[vertex1] if edge[0] != vertex2]
+      self.body[vertex2] = [edge for edge in self.body[vertex2] if edge[0] != vertex1]
+      self.size -= 1
+
+    # Adiciona as novas arestas
+    self.body[vertex1].append([vertex2, weight])
+    self.body[vertex2].append([vertex1, weight])
+    self.size += 1
+
+  def return_components(self):
+    pass
+
+  def has_edge(self, vertex1, vertex2):
+    if vertex1 not in self.vertices or vertex2 not in self.vertices:
+      raise ValueError("Vértice não existe!")
+    else:
+      if vertex1 in self.body:
+        for v in self.body[vertex1]:
+          if v[0] == vertex2:
+            return True
       else:
-          #add cada um dos vértices de diretores
-          directors = return_values(directors)
-          for director in directors:
-            if director not in self.vertices:
-              self.add_vertex(director)
-      if cast == 'nan' or cast == np.nan:
-        continue
+        return False
+        
+  def get_weight(self, vertex1, vertex2):
+    if vertex1 not in self.vertices or vertex2 not in self.vertices:
+      raise ValueError("Vértice não existe!")
+    else:
+      if vertex1 in self.body:
+        for v in self.body[vertex1]:
+          if v[0] == vertex2:
+            return v[1]
       else:
-        #add cada um dos vértices de atores
-        cast = return_values(cast)
-        for actor in cast:
-          if actor not in self.vertices:
-            self.add_vertex(actor)
+        raise ValueError("Não possuem arestas!")
 
-        #add as arestas ponderadas
-        if directors != 'nan' or directors != np.nan:
-          for director in directors:
-            for actor in cast:
-              try:
-                weight = self.get_weight(actor, director)
-                self.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
-              except:
-                self.add_edge(actor, director, 1)  # Primeira colaboração
-    print(self.body)
-
-"""Na construção do primeiro grafo (direcionado), é necessário estabelecer conexões ponderadas de acordo
-com a quantidade de colaborações partindo de cada ator/atriz até o nome de cada diretor. Na figura
-abaixo, o processo é ilustrado considerando os 10 atores e 1 dos diretores. No entanto, o processo deve
-ser realizado para cada um dos diretores listados (Michelle MacLaren, Adam Bernstein, etc)."""
+  def return_edge(self, vertex1):
+    if vertex1 not in self.vertices:
+      raise ValueError("Vértice não existe!")
+    else:
+      return self.body[vertex1]
 
 def return_values(list_values):
     list_values = [d.strip() for d in list_values.split(',')]
     list_values = list(dict.fromkeys(list_values))
     return list_values
 
-    graph_dot = pydot.Dot(graph_type='digraph', rankdir='LR')  # Grafo direcionado, da esquerda pra direita
+def work_together(actor, cast):
+  cast = [a for a in cast if a != actor]
+  return cast
 
-    # Adiciona nós
-    for vertex in graph.vertices:
-        safe_vertex = str(vertex).replace('"', '\\"')  # escapa aspas
-        node = pydot.Node(f'"{safe_vertex}"')  # força aspas ao redor
-        graph_dot.add_node(node)
+#demora pq ele itera por tudo
+def construct_graph(graph_d, graph_u, df):
+  df = df.drop(columns=['show_id', 'type', 'country', 'date_added', 'release_year', 'rating', 'duration', 'listed_in', 'description'])
+  df = df.dropna() #já tiro todas as linhas que não tiverem um valor (NaN)
+  for title, directors, cast in df.values:
+    directors = str(directors)
+    cast = str(cast)
+    title = str(title)
+  
+    #Primeiro a construção do grafo direcionado
+    directors = return_values(directors)
+    for director in directors:
+      director = format(director)
+      if director not in graph_d.vertices:
+        graph_d.add_vertex(director)
+    
+      #add cada um dos vértices de atores
+    cast = return_values(cast)
+    for actor in cast:
+      actor = format(actor)
+      if actor not in graph_d.vertices:
+        graph_d.add_vertex(actor)
+        graph_u.add_vertex(actor)
 
-    # Adiciona arestas com pesos
-    for vertex in graph.vertices:
-        for neighbor, weight in graph.body[vertex]:
-            safe_vertex = str(vertex).replace('"', '\\"')
-            safe_neighbor = str(neighbor).replace('"', '\\"')
-            edge = pydot.Edge(f'"{safe_vertex}"', f'"{safe_neighbor}"', label=str(weight))
-            graph_dot.add_edge(edge)
+    for actor in cast:
+      actor = format(actor)
+      work_together_actor = work_together(actor, cast)
+      for a in work_together_actor:
+        try:
+          weight = graph_u.get_weight(actor, a)
+          graph_u.add_edge(actor, a, weight + 1)  # Adiciona com peso incrementado
+        except:
+          graph_u.add_edge(actor, a, 1)  # Primeira colaboração
 
-    # Salva o grafo
-    graph_dot.write_png(filename)
+    #add as arestas ponderadas
+    for director in directors:
+      for actor in cast:
+        actor = format(actor)
+        director = format(director)
+        try:
+          weight = graph_d.get_weight(actor, director)
+          graph_d.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
+        except:
+          graph_d.add_edge(actor, director, 1)  # Primeira colaboração
+
+    """
+    Na construção do segundo grafo (não-direcionado), é necessário estabelecer conexões ponderadas entre
+    todos os atores/atrizes que participaram de um mesmo filme/série, conforme ilustrado a seguir. Em
+    ambos os grafos, o peso das conexões é equivalente a quantidade de colaborações em diferentes obras.
+    Por simplicidade, o grafo abaixo não contém pesos, mas você deve considerá-los.
+    """
+
+  return graph_d, graph_u
+
+def format(name):
+  name = name.split(" ")
+  final_name = ''
+  for n in name:
+    final_name += n.capitalize()
+  return final_name.replace(' ', "")#garante que tira os espaços

@@ -4,9 +4,17 @@ from graph import *
 
 # Lê o arquivo CSV
 df = pd.read_csv('netflix_amazon_disney_titles.csv')
+print(df.head())
 
 # Cria uma instância do grafo direcionado
-g = Graph_directed()
+graph_d = Graph_directed()
+graph_u = Graph_undirected()
 
+
+#Questão 1:
 # Constrói o grafo com os dados
-g.construct_graph(df)
+graph_d, graph_u = construct_graph(graph_d, graph_u, df)
+
+#Após a construção de cada grafo, retorne a quantidade de vértices e arestas.
+graph_d.return_vertex_edges()
+graph_u.return_vertex_edges()
