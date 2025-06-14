@@ -3,6 +3,7 @@ import pandas as pd
 from collections import defaultdict
 import os
 import heapq
+import random
 
 class Graph:
   def __init__(self):
@@ -34,7 +35,7 @@ class Graph:
     raise NotImplementedError("Tem que ser implementado na subclasse!")
 
   def add_vertex(self, name):
-      if name not in self.vertices:
+      if name.strip() not in self.vertices:
           self.vertices.append(name)
           self.order += 1
       else:
@@ -202,43 +203,83 @@ class Graph_directed(Graph):
       else:
          raise ValueError("Não possuem arestas!")
   
-  def dfs_kosarajus(self, source_node):
+  def dfs_kosarajus(self):
     visited = set()
-    stack = []
-    timestamps = {}  # Armazena [start_time, end_time]
-
-    stack.append((source_node, 'visit'))
-
+    timestamps = {}
     count = 1
+    nodes_to_visit = set(self.body)
+    source_node = random.choice(list(nodes_to_visit))
 
-    while stack:
-        node, state = stack.pop()
 
-        if state == 'visit':
-            if node not in visited:
-                visited.add(node)
-                timestamps[node] = [count, None]  # Marca tempo de entrada
+    while nodes_to_visit:
+        # Se não for a primeira rodada, pega qualquer nó que sobrou
+        if source_node not in nodes_to_visit:
+            source_node = random.choice(list(nodes_to_visit))
+
+        stack = [(source_node, 'visit')]
+
+        while stack:
+            node, state = stack.pop()
+
+            if state == 'visit':
+                if node not in visited:
+                    visited.add(node)
+                    timestamps[node] = [count, None]  # tempo de entrada
+                    count += 1
+
+                    stack.append((node, 'post'))
+
+                    for adj in self.body[node]:
+                        if adj not in visited:
+                            stack.append((adj, 'visit'))
+
+            elif state == 'post':
+                timestamps[node][1] = count  # tempo de saída
                 count += 1
 
-                stack.append((node, 'post'))  # Marca para pós-visitação
+        nodes_to_visit -= visited
 
-                for adj, _ in self.body.get(node, []):
-                    if adj not in visited:
-                        stack.append((adj, 'visit'))
-
-        elif state == 'post':
-            timestamps[node][1] = count  # Marca tempo de saída
-            count += 1
-
-    return timestamps  # Retorna tempos de entrada e saída
-
+    return timestamps
 
   def transpose_graph(self):
     graph_t = Graph_directed()
     for node in self.body:
-      for adj_node, weight in self.body[node]:
+      for adj_node, weight in self.body[node].items():
         graph_t.add_edge(adj_node, node, weight) #add o inverso
+    return graph_t
+  
+  def dfs_iterative(self, source_node, global_visited):
+    stack = [source_node]
+    visited = []
+    while len(stack) > 0:
+      element = stack.pop()
 
+      if element not in visited and element not in global_visited:
+        visited.append(element)
+
+        for (adj,_) in self.body[element].items():
+          if adj not in visited:
+            stack.append(adj)
+    return visited
+  
+  def kosarajus(self):
+    timestamps = self.dfs_kosarajus()
+    graph_t = self.transpose_graph()
+
+    timestamps = {n:t[1] for n, t in timestamps.items()}
+    #pego somente o nome do ver, para cada um dos meus tempos, comparando e deixando em ordem do maior para o menor
+    nodes = [n for n, t in sorted(timestamps.items(), key=lambda x: x[1], reverse=True)]
+
+    scc = []
+    visited_global = set()
+
+    for node in nodes:
+        if node not in visited_global:
+            visited = graph_t.dfs_iterative(node, list(visited_global))  # lista de nós visitados na DFS
+            scc.append(visited)
+            visited_global.update(visited)
+
+    print(f"Quantidade de componentes: {len(scc)}")
 
 class Graph_undirected(Graph):
   def __init__(self):
@@ -349,7 +390,10 @@ def read_graph_csv(csv, graph):
   df = pd.read_csv(csv)
 
   for _, row in df.iterrows():
-    graph.add_edge(row['Origem'], row['Destino'], row['Peso'])
+    try:
+      graph.add_edge(row['Origem'], row['Destino'], row['Peso'])
+    except:
+       pass
 
   return graph
 
