@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-import os
-import heapq
 import random
 
 class Graph:
@@ -28,7 +26,7 @@ class Graph:
     return self.size
   
   def return_vertex_edges(self):
-    print(f"{self.__class__.__name__}:\nVértices: {self.order}\nArestas: {self.size}")
+    print(f"{self.__class__.__name__}:\nVértices: {self.order}\nArestas: {self.size}\n")
     return 
   
   def return_components(self):
@@ -579,7 +577,6 @@ def construct_graph(graph_d, graph_u, df):
     for actor in cast:
       actor = format_name(actor)
       if actor not in graph_d.vertices:
-        print(actor)
         graph_d.add_vertex(actor)
         graph_u.add_vertex(actor)
 
