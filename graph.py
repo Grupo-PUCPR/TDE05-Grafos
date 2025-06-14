@@ -85,6 +85,13 @@ class Graph:
       for v in self.body[node]:
         adjs.append(v)   
       return adjs
+    
+  def transpose(self):
+    g_transpose = self.__class__()
+    for v in self.body:
+      for v1, weight in self.body[v].items():
+        g_transpose.add_edge(v1, v, weight)
+    return g_transpose
 
   def dfs_iterative(self, source_node):
     visited = []
@@ -338,24 +345,19 @@ def construct_graph(graph_d, graph_u, df):
         else:
           graph_d.add_edge(actor, director, 1)  # Primeira colaboração
 
-    """
-    Na construção do segundo grafo (não-direcionado), é necessário estabelecer conexões ponderadas entre
-    todos os atores/atrizes que participaram de um mesmo filme/série, conforme ilustrado a seguir. Em
-    ambos os grafos, o peso das conexões é equivalente a quantidade de colaborações em diferentes obras.
-    Por simplicidade, o grafo abaixo não contém pesos, mas você deve considerá-los.
-    """
-
   return graph_d, graph_u
 
-def save_graph_csv(graph):
+def save_graph_csv(graph, transpose=False):
   data = []
-  for origem, destinos in graph.items():
+  for origem, destinos in graph.body.items():
       for destino, peso in destinos.items():
           data.append((origem, destino, peso))
 
   df = pd.DataFrame(data, columns=['Origem', 'Destino', 'Peso'])
-  df.to_csv(f'graph_{graph.__class__.name}.csv', index=False)
-
+  if transpose:
+      df.to_csv(f'graph_{graph.__class__.__name__}_transpose.csv', index=False)
+  else:
+    df.to_csv(f'graph_{graph.__class__.__name__}.csv', index=False)
 
 def format(name):
   name = name.split(" ")
