@@ -3,7 +3,8 @@ import numpy as np
 from graph import *
 
 # Lê o arquivo CSV
-df = pd.read_csv('netflix_amazon_disney_titles.csv')
+df = pd.read_csv('netflix_amazon_disney_titles.csv', usecols=['title', 'director', 'cast'])
+df = df.head(1000)
 print(df.head())
 
 # Cria uma instância do grafo direcionado

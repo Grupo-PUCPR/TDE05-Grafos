@@ -8,8 +8,8 @@ class Graph:
   def __init__(self):
       self.order = 0
       self.size = 0
-      self.vertices = []  #Mantém a ordem de inserção
-      self.body = defaultdict(list)  #Lista de adjacência com defaultdict
+      self.vertices = []
+      self.body = defaultdict(dict) 
 
   def __str__(self):
     return self.print_list()
@@ -23,7 +23,7 @@ class Graph:
     return self.size
   
   def return_vertex_edges(self):
-    print(f"{__class__.name}:\nVértices: {self.order}\nArestas: {self.size}")
+    print(f"{self.__class__.__name__}:\nVértices: {self.order}\nArestas: {self.size}")
     return 
   
   def return_components(self):
@@ -77,13 +77,6 @@ class Graph:
   def get_weight(self, vertex1, vertex2):      
       raise NotImplementedError("Tem que ser implementado na subclasse!")
 
-  def isolated_vertices(self):
-    isolated = [v for v in self.vertices if self.degree(v) == 0]
-    print(f"\n{len(isolated)} vértices isolados: {isolated}")
-
-  def return_node(self, name):
-    return self.body[name]
-
   def get_adjacent(self, node):
     if node not in self.body:
       raise ValueError("Este nó não existe!")
@@ -92,31 +85,6 @@ class Graph:
       for v in self.body[node]:
         adjs.append(v)   
       return adjs
-
-  def dijkstra(self, source_node):
-    distance = {vertex: [np.inf, None] for vertex in self.body}
-    distance[source_node][0] = 0 
-    cost = [(0, source_node)] 
-    
-    while cost:
-      accumulated_weight, current_node = heapq.heappop(cost)
-      adjacents = self.get_adjacent(current_node)
-      for vertex, edge_weight in adjacents:
-          weight = accumulated_weight + edge_weight
-          if weight < distance[vertex][0]:
-            distance[vertex] = weight, current_node
-            heapq.heappush(cost, (weight, vertex)) 
-    
-    unreachable_nodes = [v for v in distance if distance[v][0] == np.inf]
-    for v in unreachable_nodes:
-      distance.pop(v)
-
-    return distance
-  
-  def list_distances(self, distance, node):
-    lst = self.dijkstra(node)
-    lst = [key for key, value in lst.items() if value[0] <= distance]
-    print(f'\nOs vértices estão a uma distância abaixo de {distance}: {lst}')
 
   def dfs_iterative(self, source_node):
     visited = []
@@ -205,7 +173,7 @@ obra, considerando todos os filmes e séries do catálogo.
 class Graph_directed(Graph):
   def __init__(self):
     super().__init__()
-    self.body = defaultdict(list)
+    self.body = defaultdict(dict)
 
   def add_edge(self, vertex1, vertex2, weight):
     if weight < 0:
@@ -217,13 +185,8 @@ class Graph_directed(Graph):
     if vertex2 not in self.vertices:
       self.add_vertex(vertex2)
 
-    for i in range(len(self.body[vertex1])):
-      if self.body[vertex1][i][0] == vertex2:
-          self.body[vertex1][i][1] = weight
-          return
+    self.body[vertex1][vertex2] = weight
     
-    #só add se não existir
-    self.body[vertex1].append([vertex2, weight])
     self.size += 1
 
   def remove_edge(self, vertex1, vertex2):
@@ -235,7 +198,7 @@ class Graph_directed(Graph):
 
   def get_weight(self, vertex1, vertex2):
     if vertex1 not in self.vertices or vertex2 not in self.vertices:
-      raise ValueError("Vértice não existe!")
+      return False
     else:
       if vertex1 in self.body:
         for v in self.body[vertex1]:
@@ -275,7 +238,7 @@ class Graph_directed(Graph):
 class Graph_undirected(Graph):
   def __init__(self):
     super().__init__()
-    self.body = defaultdict(list)
+    self.body = defaultdict(dict)
 
   def add_edge(self, vertex1, vertex2, weight):
     if weight < 0:
@@ -287,16 +250,7 @@ class Graph_undirected(Graph):
     if vertex2 not in self.vertices:
       self.add_vertex(vertex2)
 
-    # Remove arestas existentes se houver
-    if self.has_edge(vertex1, vertex2):
-      # Remove a aresta antiga
-      self.body[vertex1] = [edge for edge in self.body[vertex1] if edge[0] != vertex2]
-      self.body[vertex2] = [edge for edge in self.body[vertex2] if edge[0] != vertex1]
-      self.size -= 1
-
-    # Adiciona as novas arestas
-    self.body[vertex1].append([vertex2, weight])
-    self.body[vertex2].append([vertex1, weight])
+    self.body[vertex1][vertex2] = weight
     self.size += 1
 
   def return_components(self):
@@ -315,14 +269,14 @@ class Graph_undirected(Graph):
         
   def get_weight(self, vertex1, vertex2):
     if vertex1 not in self.vertices or vertex2 not in self.vertices:
-      raise ValueError("Vértice não existe!")
+      return False
     else:
       if vertex1 in self.body:
         for v in self.body[vertex1]:
-          if v[0] == vertex2:
-            return v[1]
+          if v == vertex2:
+            return self.body[vertex1][vertex2]
       else:
-        raise ValueError("Não possuem arestas!")
+        return False
 
   def return_edge(self, vertex1):
     if vertex1 not in self.vertices:
@@ -336,12 +290,11 @@ def return_values(list_values):
     return list_values
 
 def work_together(actor, cast):
-  cast = [a for a in cast if a != actor]
-  return cast
+    return set(cast) - {actor}
+
 
 #demora pq ele itera por tudo
 def construct_graph(graph_d, graph_u, df):
-  df = df.drop(columns=['show_id', 'type', 'country', 'date_added', 'release_year', 'rating', 'duration', 'listed_in', 'description'])
   df = df.dropna() #já tiro todas as linhas que não tiverem um valor (NaN)
   for title, directors, cast in df.values:
     directors = str(directors)
@@ -367,10 +320,11 @@ def construct_graph(graph_d, graph_u, df):
       actor = format(actor)
       work_together_actor = work_together(actor, cast)
       for a in work_together_actor:
-        try:
-          weight = graph_u.get_weight(actor, a)
+        a = format(a)
+        weight = graph_u.get_weight(actor, a)
+        if weight:
           graph_u.add_edge(actor, a, weight + 1)  # Adiciona com peso incrementado
-        except:
+        else:
           graph_u.add_edge(actor, a, 1)  # Primeira colaboração
 
     #add as arestas ponderadas
@@ -378,10 +332,10 @@ def construct_graph(graph_d, graph_u, df):
       for actor in cast:
         actor = format(actor)
         director = format(director)
-        try:
-          weight = graph_d.get_weight(actor, director)
+        weight = graph_u.get_weight(actor, a)
+        if weight:
           graph_d.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
-        except:
+        else:
           graph_d.add_edge(actor, director, 1)  # Primeira colaboração
 
     """
@@ -392,6 +346,16 @@ def construct_graph(graph_d, graph_u, df):
     """
 
   return graph_d, graph_u
+
+def save_graph_csv(graph):
+  data = []
+  for origem, destinos in graph.items():
+      for destino, peso in destinos.items():
+          data.append((origem, destino, peso))
+
+  df = pd.DataFrame(data, columns=['Origem', 'Destino', 'Peso'])
+  df.to_csv(f'graph_{graph.__class__.name}.csv', index=False)
+
 
 def format(name):
   name = name.split(" ")
