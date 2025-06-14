@@ -4,6 +4,7 @@ from graph import *
 import random
 
 graph_d = Graph_directed()
+graph_u = Graph_undirected()
 graph_d = read_graph_csv('teste.csv', graph_d)
 print(graph_d)
 
