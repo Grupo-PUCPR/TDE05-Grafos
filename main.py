@@ -13,6 +13,7 @@ df = df.head(5000)
 
 graph_d = Graph_directed()
 graph_u = Graph_undirected()
+graph_u = Graph_undirected()
 
 graph_d, graph_u = construct_graph(graph_d, graph_u, df)
 

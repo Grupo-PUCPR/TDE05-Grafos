@@ -108,6 +108,60 @@ class Graph:
             stack.append(adj)
     return visited
 
+  def eulerian(self): 
+    """
+    Validates if the graph is Eulerian. First checks if the total degree is even; then if the indegree and outdegree
+    of the vertex are equal; and finally, if the graph is connected.
+
+    Returns:
+        bool|str: Returns True if the graph is Eulerian, or returns error strings,
+        informing what the problems of the graph are.:
+        - "The total degree of a vertex is not even"
+        - "There are one or more vertices with indegree different from outdegree"
+        - "The graph is not connected"
+    """
+
+    invalidations = []
+    # error message
+    degree_in_diff_out = "There are one or more vertices with indegree different from outdegree"
+    graph_is_weak = "The graph is not connected"
+
+    eulerian_validation = True
+    for vertex in self.body:
+      if not(self.indegree(vertex) == self.outdegree(vertex)):
+        invalidations.append(degree_in_diff_out) if degree_in_diff_out not in invalidations else None
+
+    dfs = self.dfs_iterative(self.vertices[len(self.vertices) -1]) # checks if the graph is connected
+    eulerian_validation = sorted(dfs) == sorted(self.vertices)
+
+    invalidations.append(graph_is_weak) if not(eulerian_validation) else None
+
+    error_message = ""
+    for i, invalidation in enumerate(invalidations):
+      error_message += (invalidation + ", " if i < len(invalidations) - 1 else invalidation)
+
+    return eulerian_validation, error_message
+  
+  def diameter(self):
+        largest_costs = []
+        for node in self.vertices:
+            lst = self.dijkstra(node)
+            max_key, max_value = max(lst.items(), key=lambda item: item[1][0])
+
+            max_path = [max_key]
+            current_node = max_key
+            while current_node != node:
+                predecessor = lst[current_node][1]
+                if predecessor is None:
+                    break
+                max_path.append(predecessor)
+                current_node = predecessor
+
+            max_path.reverse()
+            largest_costs.append([max_value[0], max_path])
+
+        return max(largest_costs, key=lambda item: item[0])
+
 class Graph_directed(Graph):
   def __init__(self):
     super().__init__()
@@ -210,6 +264,110 @@ class Graph_directed(Graph):
 
     print(f"Quantidade de componentes: {len(scc)}")
 
+
+  def has_edge(self, vertex1, vertex2):
+    """Verifica se existe uma aresta direcionada de vertex1 para vertex2"""
+    if vertex1 not in self.vertices or vertex2 not in self.vertices:
+      return False
+    return vertex2 in self.body[vertex1]
+
+  def indegree(self, vertex):
+    """Calcula o grau de entrada de um vértice"""
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+
+    count = 0
+    for v in self.vertices:
+      if vertex in self.body[v]:
+        count += 1
+    return count
+
+  def outdegree(self, vertex):
+    """Calcula o grau de saída de um vértice"""
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+
+    return len(self.body[vertex])
+
+  def degree(self, vertex):
+    """Calcula o grau total de um vértice (indegree + outdegree)"""
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+
+    return self.indegree(vertex) + self.outdegree(vertex)
+
+  def degree_centrality(self, vertex):
+    """Calcula a centralidade de grau para grafo direcionado"""
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+
+    if self.order <= 1:
+      return 0.0
+
+    # Para grafo direcionado: grau máximo = 2*(n-1)
+    max_possible_degree = 2 * (self.order - 1)
+    return self.degree(vertex) / max_possible_degree
+
+
+
+  def analyze_degree_centrality(self, vertex=None, show_details=True):
+      print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
+      print(f"Total de vértices: {self.order}")
+      print(f"Total de arestas: {self.size}")
+
+      results = {}
+
+      if vertex is not None:
+          # analisa apenas um vértice
+          if vertex not in self.vertices:
+              print(f"Erro: Vértice '{vertex}' não existe!")
+              return results
+
+          centrality = self.degree_centrality(vertex)
+          out_deg = self.outdegree(vertex)
+          in_deg = self.indegree(vertex)
+          total_deg = self.degree(vertex)
+
+          results[vertex] = centrality
+
+          print(f"\n Análise do vértice '{vertex}':")
+          print(f"   Out-degree: {out_deg}")
+          print(f"   In-degree: {in_deg}")
+          print(f"   Grau total: {total_deg}")
+          print(f"   Centralidade: {centrality:.4f}")
+
+          if show_details:
+              max_possible = 2 * (self.order - 1)
+              print(f"   Cálculo: {total_deg} / {max_possible} = {centrality:.4f}")
+
+      else:
+          # Analisa todos os vértices
+          print(f"\nCentralidade de todos os vértices:")
+          print(f"{'Vértice':<15} {'Out-deg':<8} {'In-deg':<8} {'Total':<8} {'Centralidade':<12}")
+          print("-" * 60)
+
+          for v in sorted(self.vertices):
+              centrality = self.degree_centrality(v)
+              out_deg = self.outdegree(v)
+              in_deg = self.indegree(v)
+              total_deg = self.degree(v)
+
+              results[v] = centrality
+              print(f"{v:<15} {out_deg:<8} {in_deg:<8} {total_deg:<8} {centrality:<12.4f}")
+
+          # Estatísticas
+          if results:
+              max_vertex = max(results, key=results.get)
+              min_vertex = min(results, key=results.get)
+              avg_centrality = sum(results.values()) / len(results)
+
+              print(f"\n Estatísticas:")
+              print(f"   Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
+              print(f"   Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
+              print(f"   Centralidade média: {avg_centrality:.4f}")
+
+      return results
+
 class Graph_undirected(Graph):
   def __init__(self):
     super().__init__()
@@ -243,15 +401,38 @@ class Graph_undirected(Graph):
     print(f"O número de componentes é: {components}")
 
   def has_edge(self, vertex1, vertex2):
+    """Verifica se existe uma aresta entre vertex1 e vertex2 (não-direcionado)"""
     if vertex1 not in self.vertices or vertex2 not in self.vertices:
+      return False
+    # Em grafo não-direcionado, verifica ambas as direções
+    return vertex2 in self.body[vertex1] or vertex1 in self.body[vertex2]
+
+  def indegree(self, vertex):
+    """Para grafo não-direcionado, indegree = degree"""
+    return self.degree(vertex)
+
+  def outdegree(self, vertex):
+    """Para grafo não-direcionado, outdegree = degree"""
+    return self.degree(vertex)
+
+  def degree(self, vertex):
+    """Calcula o grau de um vértice em grafo não-direcionado"""
+    if vertex not in self.vertices:
       raise ValueError("Vértice não existe!")
-    else:
-      if vertex1 in self.body:
-        for v in self.body[vertex1]:
-          if v[0] == vertex2:
-            return True
-      else:
-        return False
+
+    # Conta todas as conexões únicas
+    connections = set()
+
+    # Adiciona conexões onde vertex é origem
+    for neighbor in self.body[vertex]:
+      connections.add(neighbor)
+
+    # Adiciona conexões onde vertex é destino
+    for v in self.vertices:
+      if v != vertex and vertex in self.body[v]:
+        connections.add(v)
+
+    return len(connections)
         
   def get_weight(self, vertex1, vertex2):
     if vertex1 not in self.vertices or vertex2 not in self.vertices:
@@ -269,6 +450,70 @@ class Graph_undirected(Graph):
       raise ValueError("Vértice não existe!")
     else:
       return self.body[vertex1]
+  def degree_centrality(self, vertex):
+      """Calcula a centralidade de grau para grafo não-direcionado"""
+      if vertex not in self.vertices:
+        raise ValueError("Vértice não existe!")
+
+      if self.order <= 1:
+        return 0.0
+
+      # Para grafo não-direcionado: grau máximo = (n-1)
+      max_possible_degree = self.order - 1
+      return self.degree(vertex) / max_possible_degree
+  
+  def analyze_degree_centrality(self, vertex=None, show_details=True):
+
+    print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO NÃO-DIRECIONADO ===")
+    print(f"Total de vértices: {self.order}")
+    print(f"Total de arestas: {self.size}")
+
+    results = {}
+
+    if vertex is not None:
+        if vertex not in self.vertices:
+            print(f"Erro: Vértice '{vertex}' não existe!")
+            return results
+
+        centrality = self.degree_centrality(vertex)
+        deg = self.degree(vertex)
+
+        results[vertex] = centrality
+
+        print(f"\n Análise do vértice '{vertex}':")
+        print(f"   Grau: {deg}")
+        print(f"   Centralidade: {centrality:.4f}")
+
+        if show_details:
+            max_possible = self.order - 1
+            print(f"   Cálculo: {deg} / {max_possible} = {centrality:.4f}")
+
+    else:
+        # Analisa todos os vértices
+        print(f"\nCentralidade de todos os vértices:")
+        print(f"{'Vértice':<15} {'Grau':<8} {'Centralidade':<12}")
+        print("-" * 40)
+
+        for v in sorted(self.vertices):
+            centrality = self.degree_centrality(v)
+            deg = self.degree(v)
+
+            results[v] = centrality
+            print(f"{v:<15} {deg:<8} {centrality:<12.4f}")
+
+        # Estatísticas
+        if results:
+            max_vertex = max(results, key=results.get)
+            min_vertex = min(results, key=results.get)
+            avg_centrality = sum(results.values()) / len(results)
+
+            print(f"\n Estatísticas:")
+            print(f"   Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
+            print(f"   Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
+            print(f"   Centralidade média: {avg_centrality:.4f}")
+
+    return results
+
 
   def minimum_spannig_tree(self, vertex):
     if vertex not in self.vertices:
