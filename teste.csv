@@ -1,0 +1,14 @@
+Origem,Destino,Peso
+A, B, 1
+B, C, 1
+B, F, 1
+B, E, 1
+E, A, 1
+E, F, 1
+C, D, 1
+C, G, 1
+D, C, 1
+D, H, 1
+F, G, 1
+G, F, 1
+G, H, 1

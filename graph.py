@@ -12,7 +12,11 @@ class Graph:
       self.body = defaultdict(dict) 
 
   def __str__(self):
-    return self.print_list()
+    result = ""
+    for origem, destinos in self.body.items():
+        adjacentes = ', '.join([f'{destino}({peso})' for destino, peso in destinos.items()])
+        result += f'{origem} -> {adjacentes}\n'
+    return result
     
   def get_order(self):
     print(f"\nA ordem do grafo é: {self.order}")
@@ -33,12 +37,8 @@ class Graph:
       if name not in self.vertices:
           self.vertices.append(name)
           self.order += 1
-          print(name)
       else:
-          raise ValueError("Vértice já existe!")
-
-  def print_list(self):
-      raise NotImplementedError("Tem que ser implementado na subclasse!")
+          raise ValueError("Vértice já existe!")    
 
   def add_edge(self, vertex1, vertex2, weight):
       raise NotImplementedError("Tem que ser implementado na subclasse!")
@@ -163,19 +163,6 @@ class Graph:
             largest_costs.append([max_value[0], max_path])
 
         return max(largest_costs, key=lambda item: item[0])
-  
-"""
-Neste trabalho, você e sua equipe, irão explorar os relacionamentos entre criadores de conteúdo
-disponível nas principais plataformas de streaming (Netflix, Amazon Prime Video e Disney+). A partir de
-um conjunto de dados1 com informações sobre 19.621 filmes e séries envolvendo 61.811 atores/atrizes
-e 10.870 diretores, você deverá construir dois grafos para a condução de análises exploratórias:
-
-1. Um grafo ponderado direcionado que representa as relações entre os atores/atrizes com os
-diretores das obras, considerando todos os filmes e séries do catálogo;
-
-2. Um grafo ponderado não-direcionado que representa as relações entre os atores/atrizes em uma
-obra, considerando todos os filmes e séries do catálogo.
-"""
 
 class Graph_directed(Graph):
   def __init__(self):
@@ -215,25 +202,36 @@ class Graph_directed(Graph):
       else:
          raise ValueError("Não possuem arestas!")
   
-  def dfs_visiting_finished(self, source_node):
-    visited = []
+  def dfs_kosarajus(self, source_node):
+    visited = set()
     stack = []
-    order_visited = []
+    timestamps = {}  # Armazena [start_time, end_time]
 
-    stack.append(source_node)
+    stack.append((source_node, 'visit'))
 
-    while len(stack) > 0:
-      element = stack.pop()
-      
-      if element not in visited:
-        visited.append(element)
+    count = 1
 
-        for adj, _ in self.body(element):
-          if adj not in visited:
-            stack.append(adj)
+    while stack:
+        node, state = stack.pop()
 
-    return visited
-  
+        if state == 'visit':
+            if node not in visited:
+                visited.add(node)
+                timestamps[node] = [count, None]  # Marca tempo de entrada
+                count += 1
+
+                stack.append((node, 'post'))  # Marca para pós-visitação
+
+                for adj, _ in self.body.get(node, []):
+                    if adj not in visited:
+                        stack.append((adj, 'visit'))
+
+        elif state == 'post':
+            timestamps[node][1] = count  # Marca tempo de saída
+            count += 1
+
+    return timestamps  # Retorna tempos de entrada e saída
+
 
   def transpose_graph(self):
     graph_t = Graph_directed()
@@ -346,6 +344,14 @@ def construct_graph(graph_d, graph_u, df):
           graph_d.add_edge(actor, director, 1)  # Primeira colaboração
 
   return graph_d, graph_u
+
+def read_graph_csv(csv, graph):
+  df = pd.read_csv(csv)
+
+  for _, row in df.iterrows():
+    graph.add_edge(row['Origem'], row['Destino'], row['Peso'])
+
+  return graph
 
 def save_graph_csv(graph, transpose=False):
   data = []
