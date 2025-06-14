@@ -94,76 +94,19 @@ class Graph:
         g_transpose.add_edge(v1, v, weight)
     return g_transpose
 
-  def dfs_iterative(self, source_node):
+  def dfs_iterative(self, source_node, global_visited):
+    stack = [source_node]
     visited = []
-    stack = []
-
-    stack.append(source_node)
-
     while len(stack) > 0:
       element = stack.pop()
 
-      if element not in visited:
+      if element not in visited and element not in global_visited:
         visited.append(element)
 
-        for (adj,_) in self.body[element]:
+        for (adj,_) in self.body[element].items():
           if adj not in visited:
             stack.append(adj)
     return visited
-
-  def eulerian(self): 
-    """
-    Validates if the graph is Eulerian. First checks if the total degree is even; then if the indegree and outdegree
-    of the vertex are equal; and finally, if the graph is connected.
-
-    Returns:
-        bool|str: Returns True if the graph is Eulerian, or returns error strings,
-        informing what the problems of the graph are.:
-        - "The total degree of a vertex is not even"
-        - "There are one or more vertices with indegree different from outdegree"
-        - "The graph is not connected"
-    """
-
-    invalidations = []
-    # error message
-    degree_in_diff_out = "There are one or more vertices with indegree different from outdegree"
-    graph_is_weak = "The graph is not connected"
-
-    eulerian_validation = True
-    for vertex in self.body:
-      if not(self.indegree(vertex) == self.outdegree(vertex)):
-        invalidations.append(degree_in_diff_out) if degree_in_diff_out not in invalidations else None
-
-    dfs = self.dfs_iterative(self.vertices[len(self.vertices) -1]) # checks if the graph is connected
-    eulerian_validation = sorted(dfs) == sorted(self.vertices)
-
-    invalidations.append(graph_is_weak) if not(eulerian_validation) else None
-
-    error_message = ""
-    for i, invalidation in enumerate(invalidations):
-      error_message += (invalidation + ", " if i < len(invalidations) - 1 else invalidation)
-
-    return eulerian_validation, error_message
-  
-  def diameter(self):
-        largest_costs = []
-        for node in self.vertices:
-            lst = self.dijkstra(node)
-            max_key, max_value = max(lst.items(), key=lambda item: item[1][0])
-
-            max_path = [max_key]
-            current_node = max_key
-            while current_node != node:
-                predecessor = lst[current_node][1]
-                if predecessor is None:
-                    break
-                max_path.append(predecessor)
-                current_node = predecessor
-
-            max_path.reverse()
-            largest_costs.append([max_value[0], max_path])
-
-        return max(largest_costs, key=lambda item: item[0])
 
 class Graph_directed(Graph):
   def __init__(self):
@@ -248,20 +191,6 @@ class Graph_directed(Graph):
         graph_t.add_edge(adj_node, node, weight) #add o inverso
     return graph_t
   
-  def dfs_iterative(self, source_node, global_visited):
-    stack = [source_node]
-    visited = []
-    while len(stack) > 0:
-      element = stack.pop()
-
-      if element not in visited and element not in global_visited:
-        visited.append(element)
-
-        for (adj,_) in self.body[element].items():
-          if adj not in visited:
-            stack.append(adj)
-    return visited
-  
   def kosarajus(self):
     timestamps = self.dfs_kosarajus()
     graph_t = self.transpose_graph()
@@ -300,7 +229,18 @@ class Graph_undirected(Graph):
     self.size += 1
 
   def return_components(self):
-    pass
+    global_visited = []
+    nodes = list(self.body)
+    components = 0
+    while len(global_visited) != len(self.body):
+      node = random.choice(nodes)
+      visited = self.dfs_iterative(node, global_visited)
+      global_visited += visited
+      nodes = list(set(nodes) - set(visited))
+      if visited:
+        components += 1
+
+    print(f"O número de componentes é: {components}")
 
   def has_edge(self, vertex1, vertex2):
     if vertex1 not in self.vertices or vertex2 not in self.vertices:
@@ -330,6 +270,51 @@ class Graph_undirected(Graph):
     else:
       return self.body[vertex1]
 
+  def minimum_spannig_tree(self, vertex):
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+    visited = []
+    stack = []
+
+    stack.append(vertex)
+
+    while len(stack) > 0:
+      element = stack.pop()
+
+      if element not in visited:
+        visited.append(element)
+
+        for adj in self.body[element]:
+          if adj not in visited:
+            stack.append(adj)
+    sub_graph ={}
+    for i in visited:
+      sub_graph[i] = {}
+      for adj, weight in self.body[i].items():
+          if adj in visited:
+              sub_graph[i][adj] = weight
+
+    #ALGORITMO DE PRIM
+    total_cost = 0
+    MST = {vertex: {}}
+
+    while len(MST) < len(sub_graph):
+        lower_weight = np.inf
+        for source_node in MST.keys():
+            for destination_node, weight in sub_graph[source_node].items():
+                if destination_node not in MST and weight < lower_weight:
+                    lower_node = destination_node
+                    lower_weight = weight
+                    source = source_node
+            if lower_node is None:
+              break;
+
+        MST[lower_node] = {source: lower_weight}
+        MST[source][lower_node] = lower_weight
+        total_cost += lower_weight
+
+    return  MST, total_cost
+
 def return_values(list_values):
     list_values = [d.strip() for d in list_values.split(',')]
     list_values = list(dict.fromkeys(list_values))
@@ -350,23 +335,24 @@ def construct_graph(graph_d, graph_u, df):
     #Primeiro a construção do grafo direcionado
     directors = return_values(directors)
     for director in directors:
-      director = format(director)
+      director = format_name(director)
       if director not in graph_d.vertices:
         graph_d.add_vertex(director)
     
       #add cada um dos vértices de atores
     cast = return_values(cast)
     for actor in cast:
-      actor = format(actor)
+      actor = format_name(actor)
       if actor not in graph_d.vertices:
+        print(actor)
         graph_d.add_vertex(actor)
         graph_u.add_vertex(actor)
 
     for actor in cast:
-      actor = format(actor)
+      actor = format_name(actor)
       work_together_actor = work_together(actor, cast)
       for a in work_together_actor:
-        a = format(a)
+        a = format_name(a)
         weight = graph_u.get_weight(actor, a)
         if weight:
           graph_u.add_edge(actor, a, weight + 1)  # Adiciona com peso incrementado
@@ -376,8 +362,8 @@ def construct_graph(graph_d, graph_u, df):
     #add as arestas ponderadas
     for director in directors:
       for actor in cast:
-        actor = format(actor)
-        director = format(director)
+        actor = format_name(actor)
+        director = format_name(director)
         weight = graph_u.get_weight(actor, a)
         if weight:
           graph_d.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
@@ -409,7 +395,7 @@ def save_graph_csv(graph, transpose=False):
   else:
     df.to_csv(f'graph_{graph.__class__.__name__}.csv', index=False)
 
-def format(name):
+def format_name(name):
   name = name.split(" ")
   final_name = ''
   for n in name:
