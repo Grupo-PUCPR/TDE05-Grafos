@@ -341,11 +341,6 @@ class Graph_directed(Graph):
               print(f"   Cálculo: {total_deg} / {max_possible} = {centrality:.4f}")
 
       else:
-          # Analisa todos os vértices
-          print(f"\nCentralidade de todos os vértices:")
-          print(f"{'Vértice':<15} {'Out-deg':<8} {'In-deg':<8} {'Total':<8} {'Centralidade':<12}")
-          print("-" * 60)
-
           for v in sorted(self.vertices):
               centrality = self.degree_centrality(v)
               out_deg = self.outdegree(v)
@@ -353,7 +348,7 @@ class Graph_directed(Graph):
               total_deg = self.degree(v)
 
               results[v] = centrality
-              print(f"{v:<15} {out_deg:<8} {in_deg:<8} {total_deg:<8} {centrality:<12.4f}")
+              #print(f"{v:<15} {out_deg:<8} {in_deg:<8} {total_deg:<8} {centrality:<12.4f}")
 
           # Estatísticas
           if results:
@@ -489,17 +484,12 @@ class Graph_undirected(Graph):
             print(f"   Cálculo: {deg} / {max_possible} = {centrality:.4f}")
 
     else:
-        # Analisa todos os vértices
-        print(f"\nCentralidade de todos os vértices:")
-        print(f"{'Vértice':<15} {'Grau':<8} {'Centralidade':<12}")
-        print("-" * 40)
-
         for v in sorted(self.vertices):
             centrality = self.degree_centrality(v)
             deg = self.degree(v)
 
             results[v] = centrality
-            print(f"{v:<15} {deg:<8} {centrality:<12.4f}")
+            #print(f"{v:<15} {deg:<8} {centrality:<12.4f}")
 
         # Estatísticas
         if results:

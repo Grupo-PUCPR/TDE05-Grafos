@@ -9,10 +9,9 @@ maiúsculas e sem espaços em branco no início e no final da string. Entradas d
 onde o nome do diretor e/ou nome do elenco estão vazias, devem ser ignoradas. Após a construção
 de cada grafo, retorne a quantidade de vértices e arestas."""
 df = pd.read_csv('netflix_amazon_disney_titles.csv', usecols=['title', 'director', 'cast'])
-df = df.head(5000)
+df = df.head(100)
 
 graph_d = Graph_directed()
-graph_u = Graph_undirected()
 graph_u = Graph_undirected()
 
 graph_d, graph_u = construct_graph(graph_d, graph_u, df)
@@ -39,8 +38,15 @@ print(mst)
 """
 4) (1 ponto) Função que calcula a Centralidade de Grau (Degree Centrality) de um vértice, retornando
 um valor entre 0 e 1.
+"""
+graph_d.analyze_degree_centrality()
+graph_u.analyze_degree_centrality()
+
+"""
 5) (1 ponto) Função que calcula a Centralidade de Intermediação (Betweenness Centrality) de um vértice,
-retornando um valor entre 0 e 1.
-6) (1 ponto) Função que calcula a Centralidade de Proximidade (Closeness Centrality) de um vértice,
 retornando um valor entre 0 e 1."""
 
+
+"""
+6) (1 ponto) Função que calcula a Centralidade de Proximidade (Closeness Centrality) de um vértice,
+retornando um valor entre 0 e 1."""
