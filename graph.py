@@ -548,18 +548,17 @@ class Graph_undirected(Graph):
 
     return  MST, total_cost
 
-def return_values(list_values):
-    list_values = [d.strip() for d in list_values.split(',')]
-    list_values = list(dict.fromkeys(list_values))
-    return list_values
-
 def work_together(actor, cast):
+    actor = format_name(actor)
+    cast = [format_name(a) for a in cast]
     return set(cast) - {actor}
 
 
 #demora pq ele itera por tudo
 def construct_graph(graph_d, graph_u, df):
   df = df.dropna() #já tiro todas as linhas que não tiverem um valor (NaN)
+  df['director'] = df['director'].apply(lambda x: [format_name(d) for d in return_values(str(x))])
+  df['cast'] = df['cast'].apply(lambda x: [format_name(c) for c in return_values(str(x))])
   for title, directors, cast in df.values:
     directors = str(directors)
     cast = str(cast)
@@ -568,23 +567,23 @@ def construct_graph(graph_d, graph_u, df):
     #Primeiro a construção do grafo direcionado
     directors = return_values(directors)
     for director in directors:
-      director = format_name(director)
+      #director = format_name(director)
       if director not in graph_d.vertices:
         graph_d.add_vertex(director)
     
       #add cada um dos vértices de atores
     cast = return_values(cast)
     for actor in cast:
-      actor = format_name(actor)
+      #actor = format_name(actor)
       if actor not in graph_d.vertices:
         graph_d.add_vertex(actor)
         graph_u.add_vertex(actor)
 
     for actor in cast:
-      actor = format_name(actor)
+      #actor = format_name(actor)
       work_together_actor = work_together(actor, cast)
       for a in work_together_actor:
-        a = format_name(a)
+        #a = format_name(a)
         weight = graph_u.get_weight(actor, a)
         if weight:
           graph_u.add_edge(actor, a, weight + 1)  # Adiciona com peso incrementado
@@ -594,9 +593,9 @@ def construct_graph(graph_d, graph_u, df):
     #add as arestas ponderadas
     for director in directors:
       for actor in cast:
-        actor = format_name(actor)
-        director = format_name(director)
-        weight = graph_u.get_weight(actor, a)
+        #actor = format_name(actor)
+        #director = format_name(director)
+        weight = graph_u.get_weight(actor, director)
         if weight:
           graph_d.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
         else:
@@ -618,7 +617,9 @@ def read_graph_csv(csv, graph):
 def save_graph_csv(graph, transpose=False):
   data = []
   for origem, destinos in graph.body.items():
+      origem=format_name(origem)
       for destino, peso in destinos.items():
+          destino = format_name(destino)
           data.append((origem, destino, peso))
 
   df = pd.DataFrame(data, columns=['Origem', 'Destino', 'Peso'])
@@ -628,8 +629,14 @@ def save_graph_csv(graph, transpose=False):
     df.to_csv(f'graph_{graph.__class__.__name__}.csv', index=False)
 
 def format_name(name):
-  name = name.split(" ")
-  final_name = ''
-  for n in name:
-    final_name += n.capitalize()
-  return final_name.replace(' ', "")#garante que tira os espaços
+    if pd.isnull(name):
+        return ''
+    name = str(name)  # Garante que é string
+    name = name.replace('[', '').replace(']', '').replace("'", '').replace('"', '')
+    name = name.replace(' ', '').upper()
+    return name
+
+def return_values(value):
+    if pd.isnull(value) or value == '':
+        return []
+    return [v.strip() for v in value.split(',')]

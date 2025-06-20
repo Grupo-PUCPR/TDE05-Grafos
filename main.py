@@ -9,9 +9,12 @@ maiúsculas e sem espaços em branco no início e no final da string. Entradas d
 onde o nome do diretor e/ou nome do elenco estão vazias, devem ser ignoradas. Após a construção
 de cada grafo, retorne a quantidade de vértices e arestas."""
 df = pd.read_csv('netflix_amazon_disney_titles.csv', usecols=['title', 'director', 'cast'])
+df = df.head(100)
+
 
 graph_d = Graph_directed()
 graph_u = Graph_undirected()
+
 
 graph_d, graph_u = construct_graph(graph_d, graph_u, df)
 

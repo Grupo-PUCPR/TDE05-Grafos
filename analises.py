@@ -16,7 +16,6 @@ graph_d = Graph_directed()
 graph_u = Graph_undirected()
 
 
-
 #Questão 1:
 graph_d, graph_u = construct_graph(graph_d, graph_u, df)
 
