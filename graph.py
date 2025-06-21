@@ -77,7 +77,7 @@ class Graph:
       raise NotImplementedError("Tem que ser implementado na subclasse!")
 
   def get_adjacent(self, node):
-    if node not in self.body:
+    if node not in self.vertices:
       raise ValueError("Este nó não existe!")
     else:
       adjs = []
@@ -105,6 +105,25 @@ class Graph:
           if adj not in visited:
             stack.append(adj)
     return visited
+  
+  def bfs_shortest_path(self, start_node):
+    if start_node not in self.vertices:
+      return {}
+
+    distances = {node: float('inf') for node in self.vertices}
+    distances[start_node] = 0
+    
+    queue = [start_node]
+
+    while queue:
+        current_node = queue.pop(0)
+
+        for neighbor in self.get_adjacent(current_node):
+            if distances[neighbor] == float('inf'):
+                distances[neighbor] = distances[current_node] + 1
+                queue.append(neighbor)
+    
+    return distances
 
   def eulerian(self): 
     """
@@ -159,6 +178,37 @@ class Graph:
             largest_costs.append([max_value[0], max_path])
 
         return max(largest_costs, key=lambda item: item[0])
+
+
+  def analyze_closeness_centrality(self, show_details=False):
+    print(f"\n=== ANÁLISE DE CENTRALIDADE DE PROXIMIDADE ===")
+    print(f"Tipo de Grafo: {self.__class__.__name__}")
+    
+    results = {}
+    
+    for v in self.vertices:
+      centrality = self.closeness_centrality(v)
+      results[v] = centrality
+
+    if show_details:
+        print("\nCentralidade de cada vértice:")
+        sorted_results = sorted(results.items(), key=lambda item: item[1], reverse=True)
+        for vertex, centrality in sorted_results[:10]:
+            safe_vertex_name = vertex.encode('cp1252', 'replace').decode('cp1252')
+            print(f"  - {safe_vertex_name:<20}: {centrality:.4f}")
+            # < 20 formatar com mesmo numero char todos os nomes
+
+    if results:
+        max_vertex = max(results, key=results.get)
+        min_vertex = min(results, key=results.get)
+        avg_centrality = sum(results.values()) / len(results)
+
+        print(f"\nEstatísticas:")
+        print(f"  - Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
+        print(f"  - Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
+        print(f"  - Centralidade média: {avg_centrality:.4f}")
+
+    return results
 
 class Graph_directed(Graph):
   def __init__(self):
@@ -306,9 +356,25 @@ class Graph_directed(Graph):
     max_possible_degree = 2 * (self.order - 1)
     return self.degree(vertex) / max_possible_degree
 
+  def closeness_centrality(self, vertex = None):
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+    
+    if self.order <= 1:
+        return 0.0
 
-
-  def analyze_degree_centrality(self, vertex=None, show_details=True):
+    distances = self.bfs_shortest_path(vertex)
+    
+    sum_of_inverse_distances = 0
+    for node, dist in distances.items():
+        if dist > 0 and dist != float('inf'):
+            sum_of_inverse_distances += 1 / dist
+    
+    normalizer = self.order - 1
+    #print(f"sum_of_inverse_distances: {sum_of_inverse_distances} / normalizer: {normalizer} = {sum_of_inverse_distances / normalizer}")
+    return sum_of_inverse_distances / normalizer
+    
+  def analyze_degree_centrality(self, vertex=None, show_details=False):
       print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
       print(f"Total de vértices: {self.order}")
       print(f"Total de arestas: {self.size}")
@@ -502,6 +568,29 @@ class Graph_undirected(Graph):
 
     return results
 
+  def closeness_centrality(self, vertex):
+    if vertex not in self.vertices:
+      raise ValueError("Vértice não existe!")
+
+    distances = self.bfs_shortest_path(vertex)
+
+    reachable_distances = [dist for dist in distances.values() if dist != float('inf')]
+    
+    sum_of_distances = sum(reachable_distances)
+    
+    if sum_of_distances == 0:
+        return 0.0
+
+    n_reachable_nodes = len(reachable_distances) - 1
+    
+    if n_reachable_nodes == 0:
+        return 0.0
+
+    centrality = n_reachable_nodes / sum_of_distances
+    
+    #print(f"sum_of_inverse_distances: {n_reachable_nodes} / normalizer: {sum_of_distances} = {centrality}")
+
+    return centrality
 
   def minimum_spannig_tree(self, vertex):
     if vertex not in self.vertices:

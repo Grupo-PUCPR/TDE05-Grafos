@@ -25,13 +25,27 @@ graph_u.return_vertex_edges()
 save_graph_csv(graph_d)
 save_graph_csv(graph_u)
 
-gd_transpose = graph_d.transpose()
-save_graph_csv(gd_transpose, True)
+
+#Questão 2
+print("\n--- Questão 2 ---")
+graph_d.kosarajus()
+graph_u.return_components()
 
 
-#Questao 4 - Análise dos 10 diretores mais influentes
+print("\n--- Questão 3 ---")
+node = random.choice(list(graph_u.body))
+mst, cost = graph_u.minimum_spannig_tree(node)
+print(f"O nó esclhido foi: {node}, o custo da sua árvore mínima foi de {cost}, com os respectivos nós: \n{mst}")
+
+
+print("\n--- Questão 4 ---")
 graph_d.analyze_degree_centrality()
-
-#questao 6 - Analise dos 10 atores mais influentes(nao direcionado)
-print("\n NAO DIRECIONADO")
 graph_u.analyze_degree_centrality()
+
+print("\n--- Questão 5 ---")
+
+
+
+print("\n--- Questão 6 ---")
+graph_d.analyze_closeness_centrality()
+graph_u.analyze_closeness_centrality()
