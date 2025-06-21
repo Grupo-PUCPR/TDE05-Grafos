@@ -64,15 +64,11 @@ df = pd.read_csv('netflix_amazon_disney_titles.csv', usecols=['title', 'director
 df = df.head(100)
 
 
-print("\n--- Questão 1 ---")
-q1_start_time = time.time()
+graph_d = Graph_directed()
+graph_u = Graph_undirected()
 
 
 graph_d, graph_u = construct_graph(graph_d, graph_u, df)
-# graph_d = Graph_directed()
-# graph_u = Graph_undirected()
-
-# graph_d, graph_u = construct_graph(graph_d, graph_u, df)
 
 graph_d.return_vertex_edges()
 graph_u.return_vertex_edges()
