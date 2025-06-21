@@ -180,7 +180,7 @@ class Graph:
         return max(largest_costs, key=lambda item: item[0])
 
 
-  def analyze_closeness_centrality(self, show_details=False):
+  def analyze_closeness_centrality(self):
     print(f"\n=== ANÁLISE DE CENTRALIDADE DE PROXIMIDADE ===")
     print(f"Tipo de Grafo: {self.__class__.__name__}")
     
@@ -190,13 +190,13 @@ class Graph:
       centrality = self.closeness_centrality(v)
       results[v] = centrality
 
-    if show_details:
-        print("\nCentralidade de cada vértice:")
-        sorted_results = sorted(results.items(), key=lambda item: item[1], reverse=True)
-        for vertex, centrality in sorted_results[:10]:
-            safe_vertex_name = vertex.encode('cp1252', 'replace').decode('cp1252')
-            print(f"  - {safe_vertex_name:<20}: {centrality:.4f}")
-            # < 20 formatar com mesmo numero char todos os nomes
+
+    print("\nCentralidade de cada vértice:")
+    sorted_results = sorted(results.items(), key=lambda item: item[1], reverse=True)
+    for vertex, centrality in sorted_results[:10]:
+        safe_vertex_name = vertex.encode('cp1252', 'replace').decode('cp1252')
+        print(f"  - {safe_vertex_name:<20}: {centrality:.4f}")
+        # < 20 formatar com mesmo numero char todos os nomes
 
     if results:
         max_vertex = max(results, key=results.get)
