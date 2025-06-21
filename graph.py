@@ -10,11 +10,22 @@ class Graph:
       self.vertices = []
       self.body = defaultdict(dict) 
 
+# Coloque esta versão corrigida na sua classe base 'Graph'
   def __str__(self):
     result = ""
     for origem, destinos in self.body.items():
-        adjacentes = ', '.join([f'{destino}({peso})' for destino, peso in destinos.items()])
-        result += f'{origem} -> {adjacentes}\n'
+        # "Limpa" o nome do vértice de origem para ser compatível com a saída
+        safe_origem = origem.encode('cp1252', 'replace').decode('cp1252')
+        
+        # "Limpa" o nome de cada vértice de destino antes de juntá-los na string
+        safe_adjacentes_list = []
+        for destino, peso in destinos.items():
+            safe_destino = destino.encode('cp1252', 'replace').decode('cp1252')
+            safe_adjacentes_list.append(f'{safe_destino}({peso})')
+            
+        adjacentes_str = ', '.join(safe_adjacentes_list)
+        
+        result += f'{safe_origem} -> {adjacentes_str}\n'
     return result
     
   def get_order(self):
@@ -246,7 +257,7 @@ class Graph_directed(Graph):
             #print(f"{vertex1}: {v}")
             return v[1]
       else:
-         raise ValueError("Não possuem arestas!")
+         return None
   
   def dfs_kosarajus(self):
     visited = set()
@@ -359,20 +370,21 @@ class Graph_directed(Graph):
   def closeness_centrality(self, vertex = None):
     if vertex not in self.vertices:
       raise ValueError("Vértice não existe!")
-    
-    if self.order <= 1:
-        return 0.0
 
     distances = self.bfs_shortest_path(vertex)
     
     sum_of_inverse_distances = 0
+    n_reachable_nodes = 0
+
     for node, dist in distances.items():
         if dist > 0 and dist != float('inf'):
             sum_of_inverse_distances += 1 / dist
+            n_reachable_nodes += 1
+
+    if n_reachable_nodes == 0:
+        return 0.0
     
-    normalizer = self.order - 1
-    #print(f"sum_of_inverse_distances: {sum_of_inverse_distances} / normalizer: {normalizer} = {sum_of_inverse_distances / normalizer}")
-    return sum_of_inverse_distances / normalizer
+    return sum_of_inverse_distances / n_reachable_nodes
     
   def analyze_degree_centrality(self, vertex=None, show_details=False):
       print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
@@ -555,6 +567,13 @@ class Graph_undirected(Graph):
             results[v] = centrality
             #print(f"{v:<15} {deg:<8} {centrality:<12.4f}")
 
+        print("\nCentralidade de cada vértice:")
+        sorted_results = sorted(results.items(), key=lambda item: item[1], reverse=True)
+        for vertex, centrality in sorted_results[:10]:
+            safe_vertex_name = vertex.encode('cp1252', 'replace').decode('cp1252')
+            print(f"  - {safe_vertex_name:<20}: {centrality:.4f}")
+
+
         # Estatísticas
         if results:
             max_vertex = max(results, key=results.get)
@@ -574,22 +593,16 @@ class Graph_undirected(Graph):
 
     distances = self.bfs_shortest_path(vertex)
 
-    reachable_distances = [dist for dist in distances.values() if dist != float('inf')]
+    reachable_distances = [dist for dist in distances.values() if dist != float('inf') and dist > 0]
     
-    sum_of_distances = sum(reachable_distances)
-    
-    if sum_of_distances == 0:
-        return 0.0
+    if not reachable_distances:
+      return 0.0
 
-    n_reachable_nodes = len(reachable_distances) - 1
-    
-    if n_reachable_nodes == 0:
-        return 0.0
+    sum_of_distances = sum(reachable_distances)
+    n_reachable_nodes = len(reachable_distances)
 
     centrality = n_reachable_nodes / sum_of_distances
     
-    #print(f"sum_of_inverse_distances: {n_reachable_nodes} / normalizer: {sum_of_distances} = {centrality}")
-
     return centrality
 
   def minimum_spannig_tree(self, vertex):
@@ -645,51 +658,44 @@ def work_together(actor, cast):
 
 #demora pq ele itera por tudo
 def construct_graph(graph_d, graph_u, df):
-  df = df.dropna() #já tiro todas as linhas que não tiverem um valor (NaN)
+  df = df.dropna().copy() #já tiro todas as linhas que não tiverem um valor (NaN)
   df['director'] = df['director'].apply(lambda x: [format_name(d) for d in return_values(str(x))])
   df['cast'] = df['cast'].apply(lambda x: [format_name(c) for c in return_values(str(x))])
   for title, directors, cast in df.values:
-    directors = str(directors)
-    cast = str(cast)
-    title = str(title)
+    # As 4 linhas abaixo foram REMOVIDAS pois eram redundantes e causavam o erro.
+    # directors = str(directors)
+    # cast = str(cast)
+    # directors = return_values(directors)
+    # cast = return_values(cast)
   
-    #Primeiro a construção do grafo direcionado
-    directors = return_values(directors)
+    # O resto do código funciona perfeitamente com as listas 'directors' e 'cast'
     for director in directors:
-      #director = format_name(director)
-      if director not in graph_d.vertices:
+      if director and director not in graph_d.vertices: # Adicionado 'if director' para segurança
         graph_d.add_vertex(director)
     
-      #add cada um dos vértices de atores
-    cast = return_values(cast)
     for actor in cast:
-      #actor = format_name(actor)
-      if actor not in graph_d.vertices:
+      if actor and actor not in graph_d.vertices: # Adicionado 'if actor' para segurança
         graph_d.add_vertex(actor)
         graph_u.add_vertex(actor)
 
     for actor in cast:
-      #actor = format_name(actor)
+      if not actor: continue # Pula se o ator for uma string vazia
       work_together_actor = work_together(actor, cast)
       for a in work_together_actor:
-        #a = format_name(a)
+        if not a: continue # Pula se o outro ator for uma string vazia
         weight = graph_u.get_weight(actor, a)
-        if weight:
-          graph_u.add_edge(actor, a, weight + 1)  # Adiciona com peso incrementado
-        else:
-          graph_u.add_edge(actor, a, 1)  # Primeira colaboração
+        graph_u.add_edge(actor, a, (weight or 0) + 1)
 
-    #add as arestas ponderadas
     for director in directors:
+      if not director: continue
       for actor in cast:
-        #actor = format_name(actor)
-        #director = format_name(director)
-        weight = graph_u.get_weight(actor, director)
-        if weight:
-          graph_d.add_edge(actor, director, weight + 1)  # Adiciona com peso incrementado
-        else:
-          graph_d.add_edge(actor, director, 1)  # Primeira colaboração
-
+        if not actor: continue # Pula se o ator for uma string vazia
+        # A lógica para arestas direcionadas parece um pouco estranha (ator -> diretor com peso de colaboração)
+        # Mantendo como está, mas pode ser um ponto de atenção.
+        # Assumindo que o peso aqui deve ser baseado em quantas vezes trabalharam juntos.
+        weight = graph_d.get_weight(actor, director)
+        graph_d.add_edge(actor, director, (weight or 0) + 1)
+        
   return graph_d, graph_u
 
 def read_graph_csv(csv, graph):
