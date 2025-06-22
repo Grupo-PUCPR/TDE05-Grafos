@@ -26,16 +26,6 @@ save_graph_csv(graph_d)
 save_graph_csv(graph_u)
 
 
-#Questão 2
-print("\n--- Questão 2 ---")
-graph_d.kosarajus()
-graph_u.return_components()
-
-
-print("\n--- Questão 3 ---")
-node = random.choice(list(graph_u.body))
-mst, cost = graph_u.minimum_spannig_tree(node)
-print(f"O nó esclhido foi: {node}, o custo da sua árvore mínima foi de {cost}, com os respectivos nós: \n{mst}")
 
 
 print("\n--- Questão 4 ---")
@@ -46,6 +36,3 @@ print("\n--- Questão 5 ---")
 
 
 
-print("\n--- Questão 6 ---")
-graph_d.analyze_closeness_centrality()
-graph_u.analyze_closeness_centrality()

@@ -10,7 +10,6 @@ class Graph:
       self.vertices = []
       self.body = defaultdict(dict) 
 
-# Coloque esta versão corrigida na sua classe base 'Graph'
   def __str__(self):
     result = ""
     for origem, destinos in self.body.items():
@@ -547,57 +546,66 @@ class Graph_directed(Graph):
     return sum_of_inverse_distances / n_reachable_nodes
     
   def analyze_degree_centrality(self, vertex=None, show_details=False):
-      print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
-      print(f"Total de vértices: {self.order}")
-      print(f"Total de arestas: {self.size}")
+    """
+    Analisa a centralidade de grau de forma otimizada, evitando recálculos.
+    """
+    print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
+    print(f"Total de vértices: {self.order}")
+    print(f"Total de arestas: {self.size}")
 
-      results = {}
+    results = {}
 
-      if vertex is not None:
-          # analisa apenas um vértice
-          if vertex not in self.vertices:
-              print(f"Erro: Vértice '{vertex}' não existe!")
-              return results
+    if self.order <= 1:
+        max_possible_degree = 1
+    else:
+        max_possible_degree = 2 * (self.order - 1)
 
-          centrality = self.degree_centrality(vertex)
-          out_deg = self.outdegree(vertex)
-          in_deg = self.indegree(vertex)
-          total_deg = self.degree(vertex)
 
-          results[vertex] = centrality
+    if vertex is not None:
+        # --- Análise de um único vértice ---
+        if vertex not in self.vertices:
+            print(f"Erro: Vértice '{vertex}' não existe!")
+            return results
 
-          print(f"\n Análise do vértice '{vertex}':")
-          print(f"   Out-degree: {out_deg}")
-          print(f"   In-degree: {in_deg}")
-          print(f"   Grau total: {total_deg}")
-          print(f"   Centralidade: {centrality:.4f}")
+        out_deg = self.outdegree(vertex)
+        in_deg = self.indegree(vertex)
+        
+        total_deg = out_deg + in_deg
+        
+        centrality = total_deg / max_possible_degree
+        
+        results[vertex] = centrality
 
-          if show_details:
-              max_possible = 2 * (self.order - 1)
-              print(f"   Cálculo: {total_deg} / {max_possible} = {centrality:.4f}")
+        print(f"\n Análise do vértice '{vertex}':")
+        print(f"   Out-degree: {out_deg}")
+        print(f"   In-degree: {in_deg}")
+        print(f"   Grau total: {total_deg}")
+        print(f"   Centralidade: {centrality:.4f}")
 
-      else:
-          for v in sorted(self.vertices):
-              centrality = self.degree_centrality(v)
-              out_deg = self.outdegree(v)
-              in_deg = self.indegree(v)
-              total_deg = self.degree(v)
+        if show_details:
+            print(f"   Cálculo: {total_deg} / {max_possible_degree} = {centrality:.4f}")
 
-              results[v] = centrality
-              #print(f"{v:<15} {out_deg:<8} {in_deg:<8} {total_deg:<8} {centrality:<12.4f}")
+    else:
+        # --- Análise de todos os vértices ---
+        for v in sorted(self.vertices):
+            out_deg = self.outdegree(v)
+            in_deg = self.indegree(v)
+            total_deg = out_deg + in_deg
+            centrality = total_deg / max_possible_degree
+            
+            results[v] = centrality
+        
+        if results:
+            max_vertex = max(results, key=results.get)
+            min_vertex = min(results, key=results.get)
+            avg_centrality = sum(results.values()) / len(results)
 
-          # Estatísticas
-          if results:
-              max_vertex = max(results, key=results.get)
-              min_vertex = min(results, key=results.get)
-              avg_centrality = sum(results.values()) / len(results)
+            print(f"\n Estatísticas:")
+            print(f"   Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
+            print(f"   Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
+            print(f"   Centralidade média: {avg_centrality:.4f}")
 
-              print(f"\n Estatísticas:")
-              print(f"   Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
-              print(f"   Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
-              print(f"   Centralidade média: {avg_centrality:.4f}")
-
-      return results
+    return results
 
   def betweenness_centrality(self, target_vertex):
     """
@@ -751,20 +759,27 @@ class Graph_undirected(Graph):
       return self.degree(vertex) / max_possible_degree
   
   def analyze_degree_centrality(self, vertex=None, show_details=True):
-
+    """
+    Analisa a centralidade de grau para grafo não-direcionado.
+    """
     print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO NÃO-DIRECIONADO ===")
     print(f"Total de vértices: {self.order}")
     print(f"Total de arestas: {self.size}")
 
     results = {}
 
-    if vertex is not None:
+    if self.order <= 1:
+        max_possible_degree = 1 
+    else:
+        max_possible_degree = self.order - 1
+
+    if vertex is not None: #apenas um vertice
         if vertex not in self.vertices:
             print(f"Erro: Vértice '{vertex}' não existe!")
             return results
 
-        centrality = self.degree_centrality(vertex)
         deg = self.degree(vertex)
+        centrality = deg / max_possible_degree
 
         results[vertex] = centrality
 
@@ -773,25 +788,21 @@ class Graph_undirected(Graph):
         print(f"   Centralidade: {centrality:.4f}")
 
         if show_details:
-            max_possible = self.order - 1
-            print(f"   Cálculo: {deg} / {max_possible} = {centrality:.4f}")
+            # Reutiliza a variável 'deg'
+            print(f"   Cálculo: {deg} / {max_possible_degree} = {centrality:.4f}")
 
-    else:
+    else: #todos os vertices
         for v in sorted(self.vertices):
-            centrality = self.degree_centrality(v)
             deg = self.degree(v)
-
+            centrality = deg / max_possible_degree
             results[v] = centrality
-            #print(f"{v:<15} {deg:<8} {centrality:<12.4f}")
 
-        print("\nCentralidade de cada vértice:")
+        print("\nCentralidade de cada vértice (Top 10):")
         sorted_results = sorted(results.items(), key=lambda item: item[1], reverse=True)
-        for vertex, centrality in sorted_results[:10]:
-            safe_vertex_name = vertex.encode('cp1252', 'replace').decode('cp1252')
-            print(f"  - {safe_vertex_name:<20}: {centrality:.4f}")
+        for v_name, cent in sorted_results[:10]:
+            safe_vertex_name = v_name.encode('cp1252', 'replace').decode('cp1252')
+            print(f"  - {safe_vertex_name:<20}: {cent:.4f}")
 
-
-        # Estatísticas
         if results:
             max_vertex = max(results, key=results.get)
             min_vertex = min(results, key=results.get)
