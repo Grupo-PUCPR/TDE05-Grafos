@@ -386,6 +386,8 @@ class Graph_directed(Graph):
   def __init__(self):
     super().__init__()
     self.body = defaultdict(dict)
+    self.actors = set()
+    self.directors = set()
 
   def add_edge(self, vertex1, vertex2, weight):
     if weight < 0:
@@ -546,20 +548,15 @@ class Graph_directed(Graph):
     return sum_of_inverse_distances / n_reachable_nodes
     
   def analyze_degree_centrality(self, vertex=None, show_details=False):
-    """
-    Analisa a centralidade de grau de forma otimizada, evitando recálculos.
-    """
-    print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO ===")
+
+    print(f"\n=== ANÁLISE DE CENTRALIDADE DE GRAU - GRAFO DIRECIONADO (BIPARTIDO) ===")
     print(f"Total de vértices: {self.order}")
     print(f"Total de arestas: {self.size}")
 
     results = {}
 
-    if self.order <= 1:
-        max_possible_degree = 1
-    else:
-        max_possible_degree = 2 * (self.order - 1)
-
+    num_actors = len(self.actors)
+    num_directors = len(self.directors)
 
     if vertex is not None:
         # --- Análise de um único vértice ---
@@ -569,10 +566,15 @@ class Graph_directed(Graph):
 
         out_deg = self.outdegree(vertex)
         in_deg = self.indegree(vertex)
-        
         total_deg = out_deg + in_deg
-        
-        centrality = total_deg / max_possible_degree
+
+        denominator = 1 
+        if vertex in self.directors and num_actors > 0:
+            denominator = num_actors
+        elif vertex in self.actors and num_directors > 0:
+            denominator = num_directors
+            
+        centrality = total_deg / denominator
         
         results[vertex] = centrality
 
@@ -583,30 +585,62 @@ class Graph_directed(Graph):
         print(f"   Centralidade: {centrality:.4f}")
 
         if show_details:
-            print(f"   Cálculo: {total_deg} / {max_possible_degree} = {centrality:.4f}")
+            print(f"   Cálculo: {total_deg} / {denominator} = {centrality:.4f}")
 
-    else:
-        # --- Análise de todos os vértices ---
+    else: 
+        results = {}
+        num_actors = len(self.actors)
+        num_directors = len(self.directors)
+        
         for v in sorted(self.vertices):
             out_deg = self.outdegree(v)
             in_deg = self.indegree(v)
             total_deg = out_deg + in_deg
-            centrality = total_deg / max_possible_degree
             
+            denominator = 1
+            if v in self.directors and num_actors > 0:
+                denominator = num_actors
+            elif v in self.actors and num_directors > 0:
+                denominator = num_directors
+
+            centrality = total_deg / denominator
             results[v] = centrality
+
+        # <<<Top 10 Diretores >>>
+        
+        # 1. Filtra o dicionário de resultados para conter apenas os diretores.
+        director_centrality = {
+            vertex: score 
+            for vertex, score in results.items() 
+            if vertex in self.directors
+        }
+
+        # 2. Ordena os diretores pela centralidade, do maior para o menor.
+        if director_centrality:
+            sorted_directors = sorted(
+                director_centrality.items(), 
+                key=lambda item: item[1], 
+                reverse=True
+            )
+
+            # 3. Exibe o ranking formatado dos 10 primeiros.
+            print("\n--- Top 10 Diretores Mais Influentes (por Centralidade de Grau) ---")
+            for director, centrality_score in sorted_directors[:10]:
+                # Usa codificação segura para evitar erros de impressão
+                safe_name = director.encode('cp1252', 'replace').decode('cp1252')
+                print(f"  - {safe_name:<25}: {centrality_score:.4f}")
         
         if results:
             max_vertex = max(results, key=results.get)
             min_vertex = min(results, key=results.get)
             avg_centrality = sum(results.values()) / len(results)
 
-            print(f"\n Estatísticas:")
+            print(f"\n Estatísticas (Geral - Atores e Diretores):")
             print(f"   Maior centralidade: '{max_vertex}' ({results[max_vertex]:.4f})")
             print(f"   Menor centralidade: '{min_vertex}' ({results[min_vertex]:.4f})")
             print(f"   Centralidade média: {avg_centrality:.4f}")
 
     return results
-
   def betweenness_centrality(self, target_vertex):
     """
     Calcula a centralidade de intermediação para grafo direcionado
@@ -986,13 +1020,17 @@ def construct_graph(graph_d, graph_u, df):
   
     # O resto do código funciona perfeitamente com as listas 'directors' e 'cast'
     for director in directors:
-      if director and director not in graph_d.vertices: # Adicionado 'if director' para segurança
-        graph_d.add_vertex(director)
+      if director: 
+        graph_d.directors.add(director)
+        if director and director not in graph_d.vertices: # Adicionado 'if director' para segurança
+          graph_d.add_vertex(director)
     
     for actor in cast:
-      if actor and actor not in graph_d.vertices: # Adicionado 'if actor' para segurança
-        graph_d.add_vertex(actor)
-        graph_u.add_vertex(actor)
+      if actor: 
+        graph_d.actors.add(actor)
+        if actor and actor not in graph_d.vertices: # Adicionado 'if actor' para segurança
+          graph_d.add_vertex(actor)
+          graph_u.add_vertex(actor)
 
     for actor in cast:
       if not actor: continue # Pula se o ator for uma string vazia
